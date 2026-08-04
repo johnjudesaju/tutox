@@ -3,42 +3,44 @@ import { supabase } from '@/app/lib/supabase';
 
 // GET: Fetch all users from PostgreSQL
 export async function GET() {
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .order('created_at', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('User')
+      .select('*')
+      .order('createdAt', { ascending: false });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error('Supabase error in GET /api/users:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    const formattedUsers = data.map((user) => ({
+      id: user.id,
+      name: user.name,
+      designation: user.designation,
+      roles: user.roles,
+      mobile: user.mobile,
+      status: user.status,
+    }));
+
+    return NextResponse.json(formattedUsers);
+  } catch (err) {
+    console.error('Unexpected error in GET /api/users:', err);
+    return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
   }
-
-  // Map database column names to match frontend expectations
-  const formattedUsers = data.map((user) => ({
-    id: user.id,
-    userId: user.user_id,
-    name: user.name,
-    designation: user.designation,
-    roles: user.roles,
-    mobile: user.mobile,
-    status: user.status,
-  }));
-
-  return NextResponse.json(formattedUsers);
 }
 
 // POST: Create a new user in PostgreSQL
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const randomNum = Math.floor(100 + Math.random() * 900);
-    const generatedUserId = `SC-${randomNum}`;
 
     const { data, error } = await supabase
-      .from('users')
+      .from('User')
       .insert([
         {
-          user_id: generatedUserId,
           name: body.name,
+          password: body.password || 'changeme123', // schema requires this — see note below
           designation: body.designation,
           roles: body.roles,
           mobile: body.mobile,

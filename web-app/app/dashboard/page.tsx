@@ -1,76 +1,122 @@
-'use client';
+import { getDashboardData } from "../lib/dashboard";
+import { WeeklyAttendanceChart } from "@/components/dashboard/weekly-attendance-chart";
 
-import React from 'react';
-import { Doughnut } from 'react-chartjs-2';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
-import { dashboardMetrics } from '../lib/mockData';
+export default async function PrincipalDashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ classId?: string; sectionId?: string }>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const schoolId = 1; // TODO: pull from session once auth/multi-school is wired up
+  const classId = resolvedSearchParams.classId ? Number(resolvedSearchParams.classId) : undefined;
+  const sectionId = resolvedSearchParams.sectionId ? Number(resolvedSearchParams.sectionId) : undefined;
 
-ChartJS.register(ArcElement, Tooltip, Legend);
-
-export default function DashboardPage() {
-  const feeData = {
-    labels: ['Fee Collected', 'Overdue'],
-    datasets: [{
-      data: [dashboardMetrics.feeCollection.collected, dashboardMetrics.feeCollection.overdue],
-      backgroundColor: ['#10B981', '#EF4444'], 
-      borderWidth: 0,
-    }]
-  };
+  const data = await getDashboardData(schoolId, classId, sectionId);
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="p-6 space-y-4 bg-gray-50 min-h-screen">
+      {/* Greeting */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Hi, John!</h1>
-        <p className="text-gray-500 mt-1 text-sm">Here's a quick overview of your day</p>
+        <h1 className="text-xl font-bold text-gray-900">Hi, John! 👋</h1>
+        <p className="text-sm text-gray-500">Here's a quick overview of your day</p>
       </div>
 
-      {/* Top Metrics Row */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-            <h4 className="text-sm font-semibold text-gray-500 mb-2">July Collection</h4>
-            <p className="text-2xl font-bold text-gray-900">₹ {dashboardMetrics.feeCollection.collected}L</p>
-            <p className="text-xs font-medium text-gray-400 mt-2">Total Amount: ₹ {dashboardMetrics.feeCollection.total}</p>
+      {/* Top row: Fee Collection + Student Strength + Teachers Present */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Fee Collection Status */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-700">School Fee Collection Status</h3>
+            <span className="text-xs font-bold text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
+              {data.fee.academicYear ?? "This Year"}
+            </span>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{data.fee.collectionPercent}%</p>
+          <div className="w-full h-2 bg-gray-100 rounded-full mt-3 overflow-hidden">
+            <div
+              className="h-full bg-green-500 rounded-full"
+              style={{ width: `${data.fee.collectionPercent}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-green-500" />
+              Fee Collected: ₹{(data.fee.collected / 100000).toFixed(2)}L
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              Overdue: ₹{(data.fee.overdue / 100000).toFixed(2)}L
+            </span>
+          </div>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-            <h4 className="text-sm font-semibold text-gray-500 mb-2">Overall Student Strength</h4>
-            <p className="text-2xl font-bold text-gray-900">{dashboardMetrics.studentStrength.total}</p>
-            <p className="text-xs font-medium text-gray-400 mt-2">{dashboardMetrics.studentStrength.boys} boys, {dashboardMetrics.studentStrength.girls} girls</p>
+
+        {/* Overall Student Strength */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">Overall Student Strength</h3>
+          <p className="text-3xl font-bold text-gray-900">{data.students.total}</p>
+          <p className="text-xs text-gray-400 mt-2">
+            {data.students.boys ?? "—"} boys, {data.students.girls ?? "—"} girls
+          </p>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-            <h4 className="text-sm font-semibold text-gray-500 mb-2">Teachers Present</h4>
-            <p className="text-2xl font-bold text-gray-900">{dashboardMetrics.teachers.present}</p>
-            <p className="text-xs font-medium text-gray-400 mt-2">out of {dashboardMetrics.teachers.total}</p>
-        </div>
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-            <h4 className="text-sm font-semibold text-gray-500 mb-2">No. of Events</h4>
-            <p className="text-2xl font-bold text-gray-900">20</p>
-            <p className="text-xs font-medium text-gray-400 mt-2">In whole academic year</p>
+
+        {/* Teachers Present */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">Teachers Present</h3>
+          <p className="text-3xl font-bold text-gray-900">
+            {data.teachers.present}
+            <span className="text-base text-gray-400"> / {data.teachers.total}</span>
+          </p>
         </div>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        {/* Fee Collection Chart */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex justify-between items-center mb-6">
-             <h3 className="font-bold text-gray-800">School Fee Collection Status</h3>
-             <span className="text-xs font-bold text-gray-600 bg-gray-100 px-3 py-1 rounded-full">July</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="w-40 h-40">
-                <Doughnut data={feeData} options={{ cutout: '75%', plugins: { legend: { display: false } } }} />
-            </div>
-            <div className="space-y-5 flex-1 ml-10">
-              <div>
-                <p className="text-sm font-semibold text-gray-500 flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-green-500"></span> Fee Collected</p>
-                <p className="text-xl font-bold text-gray-900 mt-1">₹{dashboardMetrics.feeCollection.collected}L</p>
-              </div>
-              <div>
-                 <p className="text-sm font-semibold text-gray-500 flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500"></span> Overdue</p>
-                <p className="text-xl font-bold text-gray-900 mt-1">₹{dashboardMetrics.feeCollection.overdue}L</p>
-              </div>
-            </div>
-          </div>
+      {/* Second row: No. of Events + Current Fee — NOT backed by schema yet */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl border border-dashed border-gray-300 p-5 opacity-60">
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">No. of Events</h3>
+          <p className="text-3xl font-bold text-gray-400">—</p>
+          <p className="text-xs text-gray-400 mt-2">No Event data source yet</p>
+        </div>
+        <div className="bg-white rounded-xl border border-dashed border-gray-300 p-5 opacity-60">
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">Current Fee</h3>
+          <p className="text-3xl font-bold text-gray-400">—</p>
+          <p className="text-xs text-gray-400 mt-2">No fee-type breakdown modeled yet</p>
+        </div>
+      </div>
+
+      {/* Present / Absent / Leave */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-gray-700">Present</h3>
+          <p className="text-2xl font-bold text-green-600 mt-1">{data.students.presentPercent}%</p>
+          <p className="text-xs text-gray-400 mt-1">{data.students.present} Students</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-gray-700">Absent</h3>
+          <p className="text-2xl font-bold text-red-500 mt-1">{data.students.absentPercent}%</p>
+          <p className="text-xs text-gray-400 mt-1">{data.students.absent} Students</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-gray-700">Leave</h3>
+          <p className="text-2xl font-bold text-yellow-500 mt-1">{data.students.leavePercent}%</p>
+          <p className="text-xs text-gray-400 mt-1">{data.students.leave} Students</p>
+        </div>
+      </div>
+
+      {/* Weekly Attendance Chart */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">Students Attendance Status</h3>
+        <WeeklyAttendanceChart data={data.weeklyChart} />
+      </div>
+
+      {/* Today's Events + App Usage — NOT backed by schema yet */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl border border-dashed border-gray-300 p-5 opacity-60">
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">Today's Events</h3>
+          <p className="text-xs text-gray-400">No Event data source yet</p>
+        </div>
+        <div className="bg-white rounded-xl border border-dashed border-gray-300 p-5 opacity-60">
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">App Usage</h3>
+          <p className="text-xs text-gray-400">No usage analytics source yet</p>
         </div>
       </div>
     </div>

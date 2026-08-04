@@ -5,80 +5,104 @@ import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const router = useRouter();
-  // Pre-filled mobile number as seen in the Figma export
-  const [mobileNo, setMobileNo] = useState('9847953684'); 
+  
+  // State management: Initialized to empty strings to capture real-time user input
+  const [mobileNo, setMobileNo] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push('/dashboard'); 
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      // Captures the exact text written in the inputs and sends it to your backend route
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobile: mobileNo, password }),
+      });
+
+      // Safely parse JSON structure even if the backend returns a raw string or structural error
+      let data;
+      const text = await response.text();
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (parseErr) {
+        throw new Error('Invalid server response');
+      }
+
+      if (response.ok) {
+        // Data successfully checked and verified with database -> Redirect to dashboard
+        router.push('/dashboard');
+      } else {
+        // Backend returned a validation failure (e.g., status 401) -> Show error
+        setError(data.message || 'Incorrect username or password');
+      }
+    } catch (err) {
+      // Catch-all structural or network failures
+      setError('Incorrect username or password');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex w-full font-sans bg-white">
       
-      {/* Left Panel: Branding & Quote */}
+      {/* Left Panel: Branding & Graphic Layout */}
       <div className="hidden lg:flex w-1/2 bg-[#0A192F] text-white flex-col justify-between p-16">
-        
-        {/* Brand Header */}
         <div>
           <h1 className="text-5xl font-extrabold tracking-tight text-white flex items-start">
-            TUTOX
-            <span className="text-xs font-normal ml-1 mt-1">TM</span>
+            TUTOX<span className="text-xs font-normal ml-1 mt-1">TM</span>
           </h1>
           <p className="text-lg text-gray-300 mt-2 font-medium">Excel and Exceed</p>
         </div>
-
-        {/* Motivational Quote */}
-        <div className="mb-12">
-          <p className="text-2xl leading-relaxed font-light text-gray-200">
-            "Education is not just about going to school and getting a degree. It's about widening your knowledge and absorbing the truth about life."
-          </p>
-          <p className="mt-6 text-lg font-semibold text-white">
-            Shakuntala Devi
-          </p>
-        </div>
+        <div className="mb-12" />
       </div>
 
-      {/* Right Panel: Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 md:p-16 bg-gray-50">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sm:p-10">
+      {/* Right Panel: Interactive Form Interface */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 md:p-16">
+        <div className="max-w-md w-full space-y-6">
           
-          {/* Form Header */}
-          <div className="mb-8 text-center sm:text-left">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              Sign-in to School Magic
-            </h2>
-            <p className="text-sm text-gray-500 mt-3">
-              Enter your mobile no and password to login
-            </p>
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Sign In</h2>
+            <p className="text-sm text-gray-500 mt-2">Access your portal using your registered credentials.</p>
           </div>
 
-          {/* Form Fields */}
-          <form onSubmit={handleLogin} className="space-y-6">
+          {/* Dynamic Error Messaging Container */}
+          {error && (
+            <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600 border border-red-200 flex items-start space-x-2 transition-all duration-200">
+              <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            
+            {/* Mobile Input Field */}
             <div>
-              <label 
-                htmlFor="mobileNo" 
-                className="block text-sm font-semibold text-gray-700 mb-2"
-              >
-                Mobile No
+              <label htmlFor="mobile" className="block text-sm font-medium text-gray-700 mb-1">
+                Mobile Number
               </label>
               <input
-                id="mobileNo"
-                type="tel"
+                id="mobile"
+                type="text"
                 required
                 value={mobileNo}
                 onChange={(e) => setMobileNo(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#0A192F] focus:border-[#0A192F] outline-none transition-all text-gray-900 font-medium"
-                placeholder="Enter mobile number"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0A192F] focus:border-transparent transition-colors"
+                placeholder="Enter your mobile number"
               />
             </div>
 
+            {/* Password Input Field */}
             <div>
-              <label 
-                htmlFor="password" 
-                className="block text-sm font-semibold text-gray-700 mb-2"
-              >
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 Password
               </label>
               <input
@@ -87,45 +111,34 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#0A192F] focus:border-[#0A192F] outline-none transition-all text-gray-900"
-                placeholder="Enter password"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0A192F] focus:border-transparent transition-colors"
+                placeholder="Enter your password"
               />
             </div>
 
-            {/* Keep me logged in */}
-            <div className="flex items-center mt-2">
-              <input
-                id="keep-logged-in"
-                type="checkbox"
-                className="h-4 w-4 text-[#0A192F] focus:ring-[#0A192F] border-gray-300 rounded cursor-pointer"
-              />
-              <label 
-                htmlFor="keep-logged-in" 
-                className="ml-3 block text-sm font-medium text-gray-700 cursor-pointer"
-              >
-                Keep me logged in
-              </label>
-            </div>
-
-            {/* Submit Button */}
+            {/* Submission Trigger */}
             <button
               type="submit"
-              className="w-full bg-[#0A192F] text-white font-bold text-sm tracking-wide py-4 px-4 rounded-lg hover:bg-[#112240] transition-colors shadow-md mt-4"
+              disabled={isLoading}
+              className="w-full bg-[#0A192F] hover:bg-[#122b4f] disabled:bg-gray-400 text-white font-medium py-2.5 px-4 rounded-lg shadow transition-colors duration-200 flex items-center justify-center space-x-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0A192F]"
             >
-              SIGN IN
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span>Verifying details...</span>
+                </>
+              ) : (
+                <span>Sign In</span>
+              )}
             </button>
+            
           </form>
-
-          {/* Footer Link */}
-          <div className="text-center mt-8">
-            <button type="button" className="text-sm font-semibold text-[#0A192F] hover:underline">
-              Trouble in login? Request Access
-            </button>
-          </div>
-          
         </div>
       </div>
-      
+
     </div>
   );
 }
