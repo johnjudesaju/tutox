@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import EditUserModal, { User } from './EditUserModal';
 
 export default function PeopleManagement() {
   const [users, setUsers] = useState<User[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,6 +29,21 @@ export default function PeopleManagement() {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const filteredUsers = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return users;
+
+    return users.filter((user) => {
+      const roles = Array.isArray(user.roles) ? user.roles.join(' ') : user.roles ?? '';
+      return (
+        user.name?.toLowerCase().includes(query) ||
+        user.designation?.toLowerCase().includes(query) ||
+        user.mobile?.toLowerCase().includes(query) ||
+        roles.toLowerCase().includes(query)
+      );
+    });
+  }, [users, searchQuery]);
 
   const handleEditClick = (user: User) => {
     setSelectedUser(user);
@@ -81,6 +97,25 @@ export default function PeopleManagement() {
             </div>
           )}
 
+          {/* Search bar */}
+          <div className="mb-4 relative max-w-sm">
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, designation, mobile, or role"
+              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+
           <div className="min-w-full inline-block align-middle">
             <div className="overflow-hidden border border-gray-200 rounded-lg shadow-sm">
               <table className="min-w-full divide-y divide-gray-200 bg-white">
@@ -88,8 +123,9 @@ export default function PeopleManagement() {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">User ID</th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Role</th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Designation</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Role</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Mobile</th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
                     <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">Actions</th>
                   </tr>
@@ -97,25 +133,26 @@ export default function PeopleManagement() {
                 <tbody className="divide-y divide-gray-200">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-6 text-center text-sm text-gray-500">
+                      <td colSpan={7} className="px-6 py-6 text-center text-sm text-gray-500">
                         Loading users...
                       </td>
                     </tr>
-                  ) : users.length === 0 ? (
+                  ) : filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-6 text-center text-sm text-gray-500">
-                        No users found.
+                      <td colSpan={7} className="px-6 py-6 text-center text-sm text-gray-500">
+                        {searchQuery ? 'No matching users found.' : 'No users found.'}
                       </td>
                     </tr>
                   ) : (
-                    users.map((user) => (
+                    filteredUsers.map((user) => (
                       <tr key={user.id} className="hover:bg-gray-50">
                         <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">{user.id}</td>
                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{user.name}</td>
+                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{user.designation}</td>
                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                           {Array.isArray(user.roles) ? user.roles.join(', ') : user.roles}
                         </td>
-                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{user.designation}</td>
+                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{user.mobile}</td>
                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{user.status}</td>
                         <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                           <button
