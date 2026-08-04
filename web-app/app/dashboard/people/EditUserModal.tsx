@@ -17,7 +17,7 @@ interface EditUserModalProps {
   onSave: (userData: User) => void;
 }
 
-const AVAILABLE_ROLES = ['TTXSUPERADMIN', 'Teacher', 'Accountant', 'Class Teacher'];
+const AVAILABLE_ROLES = ['Admin', 'Teacher'];
 
 const emptyUser: User = {
   name: '',

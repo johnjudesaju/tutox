@@ -13,42 +13,50 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
+  e.preventDefault();
+  setError(null);
+  setIsLoading(true);
 
+  try {
+    const response = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mobile: mobileNo, password }),
+    });
+
+    const text = await response.text();
+    let data: any = {};
     try {
-      // Captures the exact text written in the inputs and sends it to your backend route
-      const response = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobile: mobileNo, password }),
-      });
-
-      // Safely parse JSON structure even if the backend returns a raw string or structural error
-      let data;
-      const text = await response.text();
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch (parseErr) {
-        throw new Error('Invalid server response');
-      }
-
-      if (response.ok) {
-        // Data successfully checked and verified with database -> Redirect to dashboard
-        router.push('/dashboard');
-      } else {
-        // Backend returned a validation failure (e.g., status 401) -> Show error
-        setError(data.message || 'Incorrect username or password');
-      }
-    } catch (err) {
-      // Catch-all structural or network failures
-      setError('Incorrect username or password');
-    } finally {
-      setIsLoading(false);
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      // Response wasn't valid JSON — treat as a real server error, not a login failure
+      setError('Something went wrong. Please try again.');
+      return;
     }
-  };
 
+    if (response.ok) {
+  // Persist identity so /select-school can look up this user's schools
+  sessionStorage.setItem('userId', String(data.user.id));
+
+  const roles: string[] = data.user?.role ?? [];
+
+  if (roles.includes('Student')) {
+    router.push('/dashboard/student');
+  } else if (roles.includes('Teacher')) {
+    router.push('/dashboard/teacher');
+  } else {
+    router.push('/select-school'); // admin — must pick a school before /dashboard
+  }
+} else {
+  setError(data.message || 'Incorrect username or password');
+}
+  } catch (err) {
+    console.error('Login request failed:', err); // <-- surface it instead of hiding it
+    setError('Something went wrong. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+};
   return (
     <div className="min-h-screen flex w-full font-sans bg-white">
       

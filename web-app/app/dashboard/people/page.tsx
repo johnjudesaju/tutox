@@ -110,7 +110,7 @@ export default function PeopleManagement() {
                   ) : (
                     users.map((user) => (
                       <tr key={user.id} className="hover:bg-gray-50">
-                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">{user.userId}</td>
+                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">{user.id}</td>
                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{user.name}</td>
                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                           {Array.isArray(user.roles) ? user.roles.join(', ') : user.roles}

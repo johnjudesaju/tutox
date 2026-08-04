@@ -12,14 +12,27 @@ model School {
   address   String?
   createdAt DateTime  @default(now())
 
-  users     User[]
-  classes   Class[]
+  classes     Class[]
+  userSchools UserSchool[]
+  teachers    Teacher[]
+}
+
+model Teacher {
+  id         Int                 @id @default(autoincrement())
+  userId     Int                 @unique
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolId   Int
+  school     School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  department String
+  subjects   String[]
+  hireDate   DateTime
+  attendance TeacherAttendance[]
+
+  @@index([schoolId])
 }
 
 model User {
   id          Int       @id @default(autoincrement())
-  schoolId    Int?
-  school      School?    @relation(fields: [schoolId], references: [id])
   name        String
   password    String
   designation String
@@ -31,7 +44,18 @@ model User {
 
   students    Student[]
   teachers    Teacher[]
+  userSchools UserSchool[]
+}
 
+model UserSchool {
+  id       Int    @id @default(autoincrement())
+  userId   Int
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolId Int
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, schoolId])
+  @@index([userId])
   @@index([schoolId])
 }
 
@@ -75,15 +99,6 @@ model Student {
   attendance StudentAttendance[]
 }
 
-model Teacher {
-  id         Int                 @id @default(autoincrement())
-  userId     Int                 @unique
-  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  department String
-  subjects   String[]
-  hireDate   DateTime
-  attendance TeacherAttendance[]
-}
 
 model FeeRecord {
   id           Int      @id @default(autoincrement())

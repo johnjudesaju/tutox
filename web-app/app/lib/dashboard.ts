@@ -8,54 +8,72 @@ export async function getDashboardData(schoolId: number, classId?: number, secti
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
-  const [totalStudents, totalTeachers, feeAgg, studentAttendanceToday, teachersPresentToday, weekAttendance] =
-    await Promise.all([
-      prisma.student.count({
-        where: { user: { schoolId } },
-      }),
+  const [
+    totalStudents,
+    genderCounts,
+    totalTeachers,
+    feeAgg,
+    studentAttendanceToday,
+    teachersPresentToday,
+    weekAttendance,
+  ] = await Promise.all([
+    prisma.student.count({
+      where: { class: { schoolId } },
+    }),
 
-      prisma.teacher.count({
-        where: { user: { schoolId } },
-      }),
+    prisma.student.groupBy({
+      by: ["gender"],
+      where: { class: { schoolId } },
+      _count: { gender: true },
+    }),
 
-      prisma.feeRecord.aggregate({
-        where: { academicYear: "2025-26", student: { user: { schoolId } } },
-        _sum: { totalFee: true, collected: true, overdue: true },
-      }),
+    prisma.teacher.count({
+      where: { schoolId },
+    }),
 
-      prisma.studentAttendance.groupBy({
-        by: ["status"],
-        where: {
-          date: { gte: todayStart, lte: todayEnd },
-          student: { user: { schoolId } },
-          ...(classId && { classId }),
-          ...(sectionId && { sectionId }),
-        },
-        _count: { status: true },
-      }),
+    prisma.feeRecord.aggregate({
+      where: { academicYear: "2025-26", student: { class: { schoolId } } },
+      _sum: { totalFee: true, collected: true, overdue: true },
+    }),
 
-      prisma.teacherAttendance.count({
-        where: {
-          date: { gte: todayStart, lte: todayEnd },
-          status: "PRESENT",
-          teacher: { user: { schoolId } },
-        },
-      }),
+    prisma.studentAttendance.groupBy({
+      by: ["status"],
+      where: {
+        date: { gte: todayStart, lte: todayEnd },
+        student: { class: { schoolId } },
+        ...(classId && { classId }),
+        ...(sectionId && { sectionId }),
+      },
+      _count: { status: true },
+    }),
 
-      prisma.studentAttendance.findMany({
-        where: {
-          date: { gte: weekStart, lte: weekEnd },
-          student: { user: { schoolId } },
-          ...(classId && { classId }),
-          ...(sectionId && { sectionId }),
-        },
-        select: { date: true, status: true },
-      }),
-    ]);
+    prisma.teacherAttendance.count({
+      where: {
+        date: { gte: todayStart, lte: todayEnd },
+        status: "PRESENT",
+        teacher: { schoolId },
+      },
+    }),
+
+    prisma.studentAttendance.findMany({
+      where: {
+        date: { gte: weekStart, lte: weekEnd },
+        student: { class: { schoolId } },
+        ...(classId && { classId }),
+        ...(sectionId && { sectionId }),
+      },
+      select: { date: true, status: true },
+    }),
+  ]);
 
   const statusCounts = studentAttendanceToday.reduce(
     (acc, row) => ({ ...acc, [row.status]: row._count.status }),
     { PRESENT: 0, ABSENT: 0, LEAVE: 0, LATE: 0 } as Record<string, number>
+  );
+
+  const genderMap = genderCounts.reduce(
+    (acc, row) => ({ ...acc, [row.gender]: row._count.gender }),
+    { MALE: 0, FEMALE: 0, OTHER: 0 } as Record<string, number>
   );
 
   const dayMap: Record<string, { present: number; absent: number; leave: number }> = {};
@@ -80,6 +98,8 @@ export async function getDashboardData(schoolId: number, classId?: number, secti
     },
     students: {
       total: totalStudents,
+      boys: genderMap.MALE,
+      girls: genderMap.FEMALE,
       present: statusCounts.PRESENT,
       absent: statusCounts.ABSENT,
       leave: statusCounts.LEAVE,

@@ -1,23 +1,16 @@
-import React from 'react';
+import { getStudentDashboardData } from "../lib/student-dashboard";
 import { IoSchoolOutline, IoWalletOutline, IoCartOutline, IoMenuOutline, IoNotificationsOutline } from 'react-icons/io5';
 import { LuLaptop } from 'react-icons/lu';
 
-export default function DashboardScreen() {
-  const weeklyData = [
-    { week: 'W2', value: 90, color: '#68EBAA' },
-    { week: 'W3', value: 70, color: '#FFE6C7' },
-    { week: 'W4', value: 50, color: '#FFE6C7' },
-    { week: 'W5', value: 60, color: '#FFE6C7' },
-    { week: 'W6', value: 60, color: '#FFE6C7' },
-    { week: 'W7', value: 80, color: '#68EBAA' },
-  ];
+export default async function StudentDashboardPage() {
+  const studentId = 1; // TODO: pull from session once auth is wired up
+  const data = await getStudentDashboardData(studentId);
 
   return (
     <div className="min-h-screen bg-[#F9FBFD] p-6 text-gray-800 font-sans">
-      {/* Main Responsive Wrapper */}
       <div className="max-w-7xl mx-auto space-y-8">
-        
-        {/* Header Section */}
+
+        {/* Header Section — static */}
         <div className="flex justify-between items-center border-b border-gray-100 pb-4">
           <h2 className="text-2xl font-bold">Dashboard</h2>
           <div className="flex space-x-3">
@@ -30,7 +23,7 @@ export default function DashboardScreen() {
           </div>
         </div>
 
-        {/* 4 Icon Tabs - Expanding to Screen Width */}
+        {/* Icon Tabs — static, no schema backing */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="flex items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center mr-4">
@@ -38,32 +31,29 @@ export default function DashboardScreen() {
             </div>
             <span className="font-semibold text-gray-700">School</span>
           </div>
-          
           <div className="flex items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mr-4">
               <IoWalletOutline size={24} color="#4285F4" />
             </div>
-            <span className="font-semibold text-gray-700">Wallet</span>
+            <span className="font-semibold text-gray-700">fee pay</span>
           </div>
-
           <div className="flex items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center mr-4">
               <LuLaptop size={24} color="#34A853" />
             </div>
-            <span className="font-semibold text-gray-700">Learn</span>
+            <span className="font-semibold text-gray-700">Tutox Learn</span>
           </div>
-
           <div className="flex items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="w-12 h-12 rounded-xl bg-yellow-100 flex items-center justify-center mr-4">
               <IoCartOutline size={24} color="#FBBC05" />
             </div>
-            <span className="font-semibold text-gray-700">Cart Store</span>
+            <span className="font-semibold text-gray-700">Store</span>
           </div>
         </div>
 
         {/* Main Cards Layout */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Left Big Card - English Class */}
+          {/* Class card — static, no Exam/ClassTest model yet */}
           <div className="md:col-span-2 bg-[#5E3FE6] text-white p-6 rounded-2xl flex flex-col justify-between min-h-[200px] shadow-sm relative overflow-hidden">
             <div>
               <span className="text-xs bg-white/20 px-3 py-1 rounded-full font-medium">Class</span>
@@ -78,63 +68,68 @@ export default function DashboardScreen() {
             </div>
           </div>
 
-          {/* Right Sub-Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-4">
-            {/* Attendance Card */}
+            {/* Attendance — DYNAMIC */}
             <div className="bg-[#FFB017] text-white p-5 rounded-2xl flex flex-col justify-between min-h-[94px] shadow-sm">
               <span className="text-xs font-medium opacity-90">Attendance</span>
               <div className="flex justify-between items-end">
-                <h4 className="text-2xl font-bold">90%</h4>
-                <p className="text-xs opacity-80">Good job this week!</p>
+                <h4 className="text-2xl font-bold">{data.attendancePercent}%</h4>
+                <p className="text-xs opacity-80">
+                  {data.attendancePercent >= 75 ? 'Good job this week!' : 'Keep it up!'}
+                </p>
               </div>
             </div>
 
-            {/* Upcoming Fee Card */}
+            {/* Fee — overdue amount DYNAMIC, date static (no due-date field in schema) */}
             <div className="bg-[#FF5B5B] text-white p-5 rounded-2xl flex flex-col justify-between min-h-[94px] shadow-sm">
               <div>
                 <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full font-medium">Fee</span>
-                <h4 className="text-sm font-semibold mt-2">Upcoming Fee</h4>
+                <h4 className="text-sm font-semibold mt-2">
+                  {data.fee.overdue ? 'Overdue Fee' : 'No Pending Fee'}
+                </h4>
               </div>
-              <p className="text-base font-bold mt-1">28 January 2026</p>
+              <p className="text-base font-bold mt-1">
+                {data.fee.overdue ? `₹${data.fee.overdue.toLocaleString()}` : '—'}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Weekly Performance Graph Section */}
+        {/* Weekly Performance — DYNAMIC, from real attendance */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-base text-gray-800">Weekly Performance</h3>
-            <span className="text-xs font-bold text-green-500 bg-green-50 px-3 py-1 rounded-lg">80% Avg</span>
+            <h3 className="font-bold text-base text-gray-800">Weekly Attendance</h3>
+            <span className="text-xs font-bold text-green-500 bg-green-50 px-3 py-1 rounded-lg">
+              {data.attendancePercent}% Avg
+            </span>
           </div>
-          
-          {/* Bar Chart Container */}
-          <div className="flex justify-between items-end h-48 pt-6 px-4 max-w-4xl mx-auto">
-            {weeklyData.map((data, index) => (
-              <div key={index} className="flex flex-col items-center flex-1 space-y-3">
-                <span className="text-xs font-bold text-gray-600">{data.value}%</span>
-                <div className="w-5 relative flex justify-center h-32 bg-gray-50 rounded-t-full">
-                  <div 
-                    className="w-full rounded-t-full absolute bottom-0 transition-all duration-500" 
-                    style={{ 
-                      height: `${data.value}%`, 
-                      backgroundColor: data.color 
-                    }}
-                  />
+
+          {data.weeklyBars.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">No attendance recorded this week yet.</p>
+          ) : (
+            <div className="flex justify-between items-end h-48 pt-6 px-4 max-w-4xl mx-auto">
+              {data.weeklyBars.map((bar, index) => (
+                <div key={index} className="flex flex-col items-center flex-1 space-y-3">
+                  <span className="text-xs font-bold text-gray-600">{bar.value}%</span>
+                  <div className="w-5 relative flex justify-center h-32 bg-gray-50 rounded-t-full">
+                    <div
+                      className="w-full rounded-t-full absolute bottom-0 transition-all duration-500"
+                      style={{ height: `${bar.value}%`, backgroundColor: bar.color }}
+                    />
+                  </div>
+                  <span className="text-xs font-semibold text-gray-400">{bar.week}</span>
                 </div>
-                <span className="text-xs font-semibold text-gray-400">{data.week}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Free Courses Section */}
+        {/* Free Courses — static, no course model */}
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="font-bold text-base text-gray-800">Free Courses</h3>
             <button className="text-sm font-semibold text-[#5E3FE6] hover:underline">See All</button>
           </div>
-          
-          {/* Course Card Banner */}
           <div className="bg-[#FFF4E5] rounded-2xl p-5 flex items-center justify-between shadow-sm border border-orange-100">
             <div className="space-y-2">
               <span className="text-xs bg-orange-200 text-orange-800 px-3 py-1 rounded-full font-bold">

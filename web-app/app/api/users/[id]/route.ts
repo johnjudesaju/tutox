@@ -4,8 +4,10 @@ import { supabase } from '@/app/lib/supabase';
 // PATCH: Update an existing user in PostgreSQL
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+
   try {
     const body = await request.json();
 
@@ -13,12 +15,14 @@ export async function PATCH(
       .from('User')
       .update({
         name: body.name,
+        password: body.password || 'changeme123',
         designation: body.designation,
         roles: body.roles,
         mobile: body.mobile,
         status: body.status,
+        updatedAt: new Date().toISOString(),
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .select();
 
     if (error) {

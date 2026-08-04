@@ -34,27 +34,31 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    console.log('POST /api/users body:', body);
 
     const { data, error } = await supabase
       .from('User')
       .insert([
         {
           name: body.name,
-          password: body.password || 'changeme123', // schema requires this — see note below
+          password: body.password || 'changeme123',
           designation: body.designation,
           roles: body.roles,
           mobile: body.mobile,
           status: body.status || 'Active',
+          updatedAt: new Date().toISOString(),
         },
       ])
       .select();
 
     if (error) {
+      console.error('Supabase error in POST /api/users:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json(data[0]);
   } catch (err) {
+    console.error('Unexpected error in POST /api/users:', err);
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 }

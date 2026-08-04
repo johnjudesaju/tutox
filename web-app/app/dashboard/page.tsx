@@ -1,3 +1,5 @@
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { getDashboardData } from "../lib/dashboard";
 import { WeeklyAttendanceChart } from "@/components/dashboard/weekly-attendance-chart";
 
@@ -7,7 +9,15 @@ export default async function PrincipalDashboard({
   searchParams: Promise<{ classId?: string; sectionId?: string }>;
 }) {
   const resolvedSearchParams = await searchParams;
-  const schoolId = 1; // TODO: pull from session once auth/multi-school is wired up
+
+  const cookieStore = await cookies();
+  const schoolIdCookie = cookieStore.get('schoolId')?.value;
+
+  if (!schoolIdCookie) {
+    redirect('/select-school');
+  }
+
+  const schoolId = Number(schoolIdCookie);
   const classId = resolvedSearchParams.classId ? Number(resolvedSearchParams.classId) : undefined;
   const sectionId = resolvedSearchParams.sectionId ? Number(resolvedSearchParams.sectionId) : undefined;
 
