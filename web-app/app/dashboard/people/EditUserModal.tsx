@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
+export interface School {
+  id: number;
+  name: string;
+  address: string | null;
+}
+
 export interface User {
   id?: number | string;
   userId?: string;
@@ -8,6 +14,7 @@ export interface User {
   roles: string[];
   mobile: string;
   status: string;
+  schoolIds?: number[]; // schools this user can access
 }
 
 interface EditUserModalProps {
@@ -25,20 +32,37 @@ const emptyUser: User = {
   roles: [],
   mobile: '',
   status: 'Active',
+  schoolIds: [],
 };
 
 const EditUserModal: React.FC<EditUserModalProps> = ({ user, isOpen, onClose, onSave }) => {
   const [formData, setFormData] = useState<User>(emptyUser);
+  const [allSchools, setAllSchools] = useState<School[]>([]);
+  const [isLoadingSchools, setIsLoadingSchools] = useState(true);
 
-  // Populate the form whenever a different user is selected (edit mode),
-  // or reset it when creating a new one (user === null)
   useEffect(() => {
     if (user) {
-      setFormData(user);
+      setFormData({ ...user, schoolIds: user.schoolIds ?? [] });
     } else {
       setFormData(emptyUser);
     }
   }, [user]);
+
+  useEffect(() => {
+    const fetchSchools = async () => {
+      try {
+        const res = await fetch('/api/schools/all');
+        if (!res.ok) throw new Error('Failed to fetch schools');
+        const data = await res.json();
+        setAllSchools(data);
+      } catch (err) {
+        console.error('Failed to load schools list:', err);
+      } finally {
+        setIsLoadingSchools(false);
+      }
+    };
+    if (isOpen) fetchSchools();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -57,6 +81,15 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ user, isOpen, onClose, on
     setFormData((prev) => ({
       ...prev,
       roles: checked ? [...prev.roles, role] : prev.roles.filter((r) => r !== role),
+    }));
+  };
+
+  const handleSchoolToggle = (schoolId: number, checked: boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      schoolIds: checked
+        ? [...(prev.schoolIds ?? []), schoolId]
+        : (prev.schoolIds ?? []).filter((id) => id !== schoolId),
     }));
   };
 
@@ -156,7 +189,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ user, isOpen, onClose, on
               <label className="block text-xs font-medium text-gray-600 mb-0.5">Roles</label>
               <p className="text-[10px] text-gray-400 mb-1">Select the roles this user will have.</p>
             </div>
-
             <div className="border border-gray-200 rounded p-3 bg-white space-y-2">
               {AVAILABLE_ROLES.map((role) => (
                 <label key={role} className="flex items-center space-x-2 cursor-pointer">
@@ -169,6 +201,35 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ user, isOpen, onClose, on
                   <span className="text-xs font-medium text-gray-500">{role}</span>
                 </label>
               ))}
+            </div>
+          </div>
+
+          {/* School Access Checkboxes */}
+          <div className="space-y-2 pt-1">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-0.5">School Access</label>
+              <p className="text-[10px] text-gray-400 mb-1">
+                Select the schools this user can access. They'll choose among these after logging in.
+              </p>
+            </div>
+            <div className="border border-gray-200 rounded p-3 bg-white space-y-2 max-h-40 overflow-y-auto">
+              {isLoadingSchools ? (
+                <p className="text-xs text-gray-400">Loading schools...</p>
+              ) : allSchools.length === 0 ? (
+                <p className="text-xs text-gray-400">No schools found.</p>
+              ) : (
+                allSchools.map((school) => (
+                  <label key={school.id} className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={(formData.schoolIds ?? []).includes(school.id)}
+                      onChange={(e) => handleSchoolToggle(school.id, e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                    />
+                    <span className="text-xs font-medium text-gray-500">{school.name}</span>
+                  </label>
+                ))
+              )}
             </div>
           </div>
 

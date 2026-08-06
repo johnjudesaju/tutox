@@ -1,12 +1,22 @@
 import { prisma } from "./prisma";
 import { startOfDay, endOfDay, startOfWeek, endOfWeek } from "date-fns";
 
-export async function getDashboardData(schoolId: number, classId?: number, sectionId?: number) {
+export async function getDashboardData(
+  schoolId: number,
+  classId?: number,
+  sectionId?: number,
+  academicYear?: string
+) {
   const today = new Date();
   const todayStart = startOfDay(today);
   const todayEnd = endOfDay(today);
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+
+  const feeWhere: any = { student: { class: { schoolId } } };
+  if (academicYear) {
+    feeWhere.academicYear = academicYear;
+  }
 
   const [
     totalStudents,
@@ -32,7 +42,7 @@ export async function getDashboardData(schoolId: number, classId?: number, secti
     }),
 
     prisma.feeRecord.aggregate({
-      where: { academicYear: "2025-26", student: { class: { schoolId } } },
+      where: feeWhere,
       _sum: { totalFee: true, collected: true, overdue: true },
     }),
 
@@ -95,6 +105,7 @@ export async function getDashboardData(schoolId: number, classId?: number, secti
       totalAmount: totalFee,
       collected,
       overdue,
+      academicYear: academicYear ?? "All Years",
     },
     students: {
       total: totalStudents,

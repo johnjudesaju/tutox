@@ -1,57 +1,28 @@
-import { NextResponse } from 'next/server';
-import { supabase } from '@/app/lib/supabase';
+import { NextResponse } from "next/server";
+import { verifyToken } from "@/app/lib/auth";
+import { getDashboardData } from "@/app/lib/dashboard";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // Fee collection — sum across all FeeRecord rows
-    const { data: feeRecords, error: feeError } = await supabase
-      .from('FeeRecord')
-      .select('totalFee, collected, overdue');
+    const payload = verifyToken(request);
 
-    if (feeError) throw feeError;
+    if (!payload.schoolId) {
+      return NextResponse.json(
+        { error: "No school selected for this session", code: "NO_SCHOOL_SELECTED" },
+        { status: 400 }
+      );
+    }
 
-    const feeCollection = feeRecords.reduce(
-      (acc, r) => ({
-        total: acc.total + (r.totalFee || 0),
-        collected: acc.collected + (r.collected || 0),
-        overdue: acc.overdue + (r.overdue || 0),
-      }),
-      { total: 0, collected: 0, overdue: 0 }
-    );
+    const { searchParams } = new URL(request.url);
+const classId = searchParams.get("classId") ? Number(searchParams.get("classId")) : undefined;
+const sectionId = searchParams.get("sectionId") ? Number(searchParams.get("sectionId")) : undefined;
+const academicYear = searchParams.get("academicYear") ?? undefined;
 
-    // Student strength — total + gender breakdown
-    const { data: students, error: studentError } = await supabase
-      .from('Student')
-      .select('gender');
+const data = await getDashboardData(Number(payload.schoolId), classId, sectionId, academicYear);
 
-    if (studentError) throw studentError;
-
-    const studentStrength = {
-      total: students.length,
-      boys: students.filter((s) => s.gender === 'MALE').length,
-      girls: students.filter((s) => s.gender === 'FEMALE').length,
-    };
-
-    // Teacher count — total only; "present" has no schema backing yet
-    const { count: teacherTotal, error: teacherError } = await supabase
-      .from('Teacher')
-      .select('*', { count: 'exact', head: true });
-
-    if (teacherError) throw teacherError;
-
-    return NextResponse.json({
-      feeCollection,
-      studentStrength,
-      teachers: {
-        total: teacherTotal ?? 0,
-        present: null, // no attendance data source yet
-      },
-      events: {
-        count: null, // no Event model yet
-      },
-    });
+    return NextResponse.json(data);
   } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: 'Failed to fetch dashboard data' }, { status: 500 });
+    console.error("GET /api/dashboard error:", err);
+    return NextResponse.json({ error: "Unauthorized or failed to fetch dashboard data" }, { status: 401 });
   }
 }

@@ -19,13 +19,16 @@ export default function SelectSchoolPage() {
   useEffect(() => {
     const fetchSchools = async () => {
       try {
+        const token = sessionStorage.getItem('token');
         const userId = sessionStorage.getItem('userId');
-        if (!userId) {
-          router.push('/login');
+        if (!token || !userId) {
+          router.push('/');
           return;
         }
 
-        const res = await fetch(`/api/schools?userId=${userId}`);
+        const res = await fetch(`/api/schools?userId=${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (!res.ok) throw new Error('Failed to fetch schools');
         const data = await res.json();
         setSchools(data);
@@ -44,12 +47,19 @@ export default function SelectSchoolPage() {
     if (!selectedId) return;
 
     try {
+      const token = sessionStorage.getItem('token');
       const res = await fetch('/api/select-school', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ schoolId: selectedId }),
       });
       if (!res.ok) throw new Error('Failed to select school');
+
+      const result = await res.json();
+      sessionStorage.setItem('token', result.token); // re-issued token now carries schoolId
 
       router.push('/dashboard');
     } catch (err) {

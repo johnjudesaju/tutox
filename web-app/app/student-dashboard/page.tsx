@@ -1,30 +1,85 @@
-import { getStudentDashboardData } from "../lib/student-dashboard";
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { IoSchoolOutline, IoWalletOutline, IoCartOutline, IoMenuOutline, IoNotificationsOutline } from 'react-icons/io5';
 import { LuLaptop } from 'react-icons/lu';
+import LogoutButton from '@/components/LogoutButton';
+import StudentProfileMenu from '@/components/StudentProfileMenu';
 
-export default async function StudentDashboardPage() {
-  const studentId = 1; // TODO: pull from session once auth is wired up
-  const data = await getStudentDashboardData(studentId);
+interface StudentDashboardData {
+  attendancePercent: number;
+  weeklyBars: { week: string; value: number; color: string }[];
+  fee: { overdue: number | null };
+}
+
+export default function StudentDashboardPage() {
+  const router = useRouter();
+  const [data, setData] = useState<StudentDashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = sessionStorage.getItem('token');
+        if (!token) {
+          router.push('/');
+          return;
+        }
+
+        const res = await fetch('/api/student-dashboard', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.status === 401) {
+          router.push('/');
+          return;
+        }
+
+        const body = await res.json();
+
+        if (!res.ok) throw new Error(body.error || 'Failed to fetch dashboard data');
+
+        setData(body);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Something went wrong');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [router]);
+
+  if (isLoading) {
+    return <div className="p-6 text-sm text-gray-500">Loading dashboard...</div>;
+  }
+
+  if (error || !data) {
+    return <div className="p-6 text-sm text-red-600">{error || 'Failed to load dashboard.'}</div>;
+  }
 
   return (
     <div className="min-h-screen bg-[#F9FBFD] p-6 text-gray-800 font-sans">
       <div className="max-w-7xl mx-auto space-y-8">
 
-        {/* Header Section — static */}
+        {/* Header Section */}
         <div className="flex justify-between items-center border-b border-gray-100 pb-4">
           <h2 className="text-2xl font-bold">Dashboard</h2>
-          <div className="flex space-x-3">
-            <button className="p-2.5 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
-              <IoNotificationsOutline size={22} className="text-gray-600" />
-            </button>
-            <button className="p-2.5 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
-              <IoMenuOutline size={22} className="text-gray-600" />
-            </button>
-          </div>
+          <div className="flex items-center space-x-3">
+  <button className="p-2.5 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
+    <IoNotificationsOutline size={22} className="text-gray-600" />
+  </button>
+  <StudentProfileMenu />
+  <LogoutButton />
+</div>
+          
         </div>
 
         {/* Icon Tabs — static, no schema backing */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          
           <div className="flex items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center mr-4">
               <IoSchoolOutline size={24} color="#EA4335" />
@@ -50,10 +105,10 @@ export default async function StudentDashboardPage() {
             <span className="font-semibold text-gray-700">Store</span>
           </div>
         </div>
+        
 
         {/* Main Cards Layout */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Class card — static, no Exam/ClassTest model yet */}
           <div className="md:col-span-2 bg-[#5E3FE6] text-white p-6 rounded-2xl flex flex-col justify-between min-h-[200px] shadow-sm relative overflow-hidden">
             <div>
               <span className="text-xs bg-white/20 px-3 py-1 rounded-full font-medium">Class</span>
@@ -69,7 +124,6 @@ export default async function StudentDashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-4">
-            {/* Attendance — DYNAMIC */}
             <div className="bg-[#FFB017] text-white p-5 rounded-2xl flex flex-col justify-between min-h-[94px] shadow-sm">
               <span className="text-xs font-medium opacity-90">Attendance</span>
               <div className="flex justify-between items-end">
@@ -80,7 +134,6 @@ export default async function StudentDashboardPage() {
               </div>
             </div>
 
-            {/* Fee — overdue amount DYNAMIC, date static (no due-date field in schema) */}
             <div className="bg-[#FF5B5B] text-white p-5 rounded-2xl flex flex-col justify-between min-h-[94px] shadow-sm">
               <div>
                 <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full font-medium">Fee</span>
@@ -95,7 +148,7 @@ export default async function StudentDashboardPage() {
           </div>
         </div>
 
-        {/* Weekly Performance — DYNAMIC, from real attendance */}
+        {/* Weekly Performance */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-bold text-base text-gray-800">Weekly Attendance</h3>
@@ -124,7 +177,7 @@ export default async function StudentDashboardPage() {
           )}
         </div>
 
-        {/* Free Courses — static, no course model */}
+        {/* Free Courses */}
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="font-bold text-base text-gray-800">Free Courses</h3>

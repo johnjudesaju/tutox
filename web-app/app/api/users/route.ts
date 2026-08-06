@@ -34,7 +34,6 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    console.log('POST /api/users body:', body);
 
     const { data, error } = await supabase
       .from('User')
@@ -56,7 +55,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(data[0]);
+    const newUser = data[0];
+
+    // Link the new user to selected schools
+    if (body.schoolIds && body.schoolIds.length > 0) {
+      const links = body.schoolIds.map((schoolId: number) => ({
+        userId: newUser.id,
+        schoolId,
+      }));
+
+      const { error: linkError } = await supabase.from('UserSchool').insert(links);
+      if (linkError) {
+        console.error('Supabase error linking UserSchool:', linkError);
+        // User was created but school links failed — surface this clearly
+        return NextResponse.json(
+          { error: `User created, but school access failed: ${linkError.message}` },
+          { status: 500 }
+        );
+      }
+    }
+
+    return NextResponse.json(newUser);
   } catch (err) {
     console.error('Unexpected error in POST /api/users:', err);
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });

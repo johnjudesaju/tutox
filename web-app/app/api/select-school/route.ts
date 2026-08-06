@@ -1,22 +1,28 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
+import { verifyToken } from "../../lib/auth";
+
+const JWT_SECRET = process.env.JWT_SECRET!;
 
 export async function POST(request: Request) {
   try {
+    const payload = verifyToken(request);
     const { schoolId } = await request.json();
 
     if (!schoolId) {
-      return NextResponse.json({ error: 'schoolId is required' }, { status: 400 });
+      return NextResponse.json({ error: "schoolId is required" }, { status: 400 });
     }
 
-    const response = NextResponse.json({ success: true });
-    response.cookies.set('schoolId', String(schoolId), {
-      httpOnly: true,
-      path: '/',
-      maxAge: 60 * 60 * 24, // 1 day
-    });
+    // Re-issue token with schoolId embedded — no cookies needed
+    const token = jwt.sign(
+      { userId: payload.userId, role: payload.role, schoolId: String(schoolId) },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
-    return response;
+    return NextResponse.json({ success: true, token });
   } catch (err) {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    console.error(err);
+    return NextResponse.json({ error: "Unauthorized or invalid request" }, { status: 401 });
   }
 }

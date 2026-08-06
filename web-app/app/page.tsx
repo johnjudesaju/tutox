@@ -35,17 +35,17 @@ export default function LoginPage() {
     }
 
     if (response.ok) {
-  // Persist identity so /select-school can look up this user's schools
+  sessionStorage.setItem('token', data.token);
   sessionStorage.setItem('userId', String(data.user.id));
 
   const roles: string[] = data.user?.role ?? [];
 
   if (roles.includes('Student')) {
-    router.push('/dashboard/student');
-  } else if (roles.includes('Teacher')) {
+    router.push('/student-dashboard');
+  } else if (roles.includes('/teacher-dashboard')) {
     router.push('/dashboard/teacher');
   } else {
-    router.push('/select-school'); // admin — must pick a school before /dashboard
+    router.push('select-school');
   }
 } else {
   setError(data.message || 'Incorrect username or password');
