@@ -7,11 +7,11 @@ export async function getDashboardData(
   sectionId?: number,
   academicYear?: string
 ) {
-  const today = new Date();
-  const todayStart = startOfDay(today);
-  const todayEnd = endOfDay(today);
-  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+  const now = new Date();
+  const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+  const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
+  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
 
   const feeWhere: any = { student: { class: { schoolId } } };
   if (academicYear) {
