@@ -87,7 +87,7 @@ export default function PeopleManagement() {
             className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700 focus:outline-none"
           >
             Create New User
-          </button>
+          </button> 
         </div>
 
         <div className="flex-1 overflow-x-hidden overflow-y-auto p-6">

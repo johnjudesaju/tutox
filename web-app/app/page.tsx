@@ -5,61 +5,120 @@ import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const router = useRouter();
-  
+
   // State management: Initialized to empty strings to capture real-time user input
   const [mobileNo, setMobileNo] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Forgot password modal state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetMobile, setResetMobile] = useState('');
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+  const [isResetLoading, setIsResetLoading] = useState(false);
+
   const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError(null);
-  setIsLoading(true);
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
 
-  try {
-    const response = await fetch('/api/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mobile: mobileNo, password }),
-    });
-
-    const text = await response.text();
-    let data: any = {};
     try {
-      data = text ? JSON.parse(text) : {};
-    } catch {
-      // Response wasn't valid JSON — treat as a real server error, not a login failure
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobile: mobileNo, password }),
+      });
+
+      const text = await response.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        // Response wasn't valid JSON — treat as a real server error, not a login failure
+        setError('Something went wrong. Please try again.');
+        return;
+      }
+
+      if (response.ok) {
+        sessionStorage.setItem('token', data.token);
+        sessionStorage.setItem('userId', String(data.user.id));
+
+        const roles: string[] = data.user?.role ?? [];
+
+        if (roles.includes('Student')) {
+          router.push('/student-dashboard');
+        } else if (roles.includes('/teacher-dashboard')) {
+          router.push('/dashboard/teacher');
+        } else {
+          router.push('select-school');
+        }
+      } else {
+        setError(data.message || 'Incorrect username or password');
+      }
+    } catch (err) {
+      console.error('Login request failed:', err); // <-- surface it instead of hiding it
       setError('Something went wrong. Please try again.');
-      return;
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    if (response.ok) {
-  sessionStorage.setItem('token', data.token);
-  sessionStorage.setItem('userId', String(data.user.id));
+  const openForgotPassword = () => {
+    setResetMobile(mobileNo); // carry over what they already typed, if anything
+    setResetError(null);
+    setResetSuccess(null);
+    setShowForgotPassword(true);
+  };
 
-  const roles: string[] = data.user?.role ?? [];
+  const closeForgotPassword = () => {
+    setShowForgotPassword(false);
+    setResetError(null);
+    setResetSuccess(null);
+    setIsResetLoading(false);
+  };
 
-  if (roles.includes('Student')) {
-    router.push('/student-dashboard');
-  } else if (roles.includes('/teacher-dashboard')) {
-    router.push('/dashboard/teacher');
-  } else {
-    router.push('select-school');
-  }
-} else {
-  setError(data.message || 'Incorrect username or password');
-}
-  } catch (err) {
-    console.error('Login request failed:', err); // <-- surface it instead of hiding it
-    setError('Something went wrong. Please try again.');
-  } finally {
-    setIsLoading(false);
-  }
-};
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError(null);
+    setResetSuccess(null);
+    setIsResetLoading(true);
+
+    try {
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobile: resetMobile }),
+      });
+
+      const text = await response.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        setResetError('Something went wrong. Please try again.');
+        return;
+      }
+
+      if (response.ok) {
+        setResetSuccess(
+          data.message || 'If that mobile number is registered, password reset instructions have been sent.'
+        );
+      } else {
+        setResetError(data.message || 'Unable to process your request. Please try again.');
+      }
+    } catch (err) {
+      console.error('Forgot password request failed:', err);
+      setResetError('Something went wrong. Please try again.');
+    } finally {
+      setIsResetLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex w-full font-sans bg-white">
-      
+
       {/* Left Panel: Branding & Graphic Layout */}
       <div className="hidden lg:flex w-1/2 bg-[#0A192F] text-white flex-col justify-between p-16">
         <div>
@@ -74,7 +133,7 @@ export default function LoginPage() {
       {/* Right Panel: Interactive Form Interface */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 md:p-16">
         <div className="max-w-md w-full space-y-6">
-          
+
           <div>
             <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Sign In</h2>
             <p className="text-sm text-gray-500 mt-2">Access your portal using your registered credentials.</p>
@@ -91,7 +150,7 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleLogin} className="space-y-4">
-            
+
             {/* Mobile Input Field */}
             <div>
               <label htmlFor="mobile" className="block text-sm font-medium text-gray-700 mb-1">
@@ -142,10 +201,89 @@ export default function LoginPage() {
                 <span>Sign In</span>
               )}
             </button>
-            
+
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={openForgotPassword}
+                className="text-sm font-medium text-[#0A192F] hover:underline focus:outline-none"
+              >
+                Forgot password?
+              </button>
+            </div>
+
           </form>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
+          onClick={closeForgotPassword}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Reset your password</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Enter your registered mobile number and we&apos;ll send reset instructions.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeForgotPassword}
+                aria-label="Close"
+                className="text-gray-400 hover:text-gray-600 focus:outline-none"
+              >
+                <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {resetError && (
+              <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-200">
+                {resetError}
+              </div>
+            )}
+
+            {resetSuccess ? (
+              <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700 border border-green-200">
+                {resetSuccess}
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div>
+                  <label htmlFor="reset-mobile" className="block text-sm font-medium text-gray-700 mb-1">
+                    Mobile Number
+                  </label>
+                  <input
+                    id="reset-mobile"
+                    type="text"
+                    required
+                    value={resetMobile}
+                    onChange={(e) => setResetMobile(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0A192F] focus:border-transparent transition-colors"
+                    placeholder="Enter your mobile number"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isResetLoading}
+                  className="w-full bg-[#0A192F] hover:bg-[#122b4f] disabled:bg-gray-400 text-white font-medium py-2.5 px-4 rounded-lg shadow transition-colors duration-200 flex items-center justify-center space-x-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0A192F]"
+                >
+                  {isResetLoading ? 'Sending...' : 'Send reset instructions'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { LayoutDashboard, Users, BookOpen, Calendar, Settings, LogOut } from 'lucide-react';
 
 interface SchoolInfo {
@@ -10,8 +10,16 @@ interface SchoolInfo {
   admin: { name: string; designation: string };
 }
 
+const navItems = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, disabled: false },
+  { href: '/dashboard/people', label: 'User Management', icon: Users, disabled: false },
+  { href: '/dashboard/classes', label: 'Class Management', icon: BookOpen, disabled: true },
+  { href: '/dashboard/exams', label: 'Exam Master', icon: Calendar, disabled: true },
+];
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [info, setInfo] = useState<SchoolInfo | null>(null);
 
   const handleLogout = () => {
@@ -27,8 +35,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (!token) return;
 
         const res = await fetch('/api/schools/current', {
-  headers: { Authorization: `Bearer ${token}` },
-});
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (!res.ok) return;
 
         const data = await res.json();
@@ -56,22 +64,42 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <nav className="flex-1 overflow-y-auto py-4 flex flex-col">
           <ul className="space-y-2 px-4 flex-1">
-            <li>
-              <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2 bg-blue-50 text-blue-900 rounded-lg font-semibold text-sm">
-                <LayoutDashboard size={18} /> Dashboard
-              </Link>
-            </li>
-            <li>
-              <Link href="/dashboard/people" className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium text-sm transition-colors">
-                <Users size={18} /> User Management
-              </Link>
-            </li>
-            <li className="flex items-center gap-3 px-3 py-2 text-gray-400 font-medium text-sm cursor-not-allowed">
-                <BookOpen size={18} /> Class Management
-            </li>
-            <li className="flex items-center gap-3 px-3 py-2 text-gray-400 font-medium text-sm cursor-not-allowed">
-                <Calendar size={18} /> Exam Master
-            </li>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+
+              if (item.disabled) {
+                return (
+                  <li
+                    key={item.label}
+                    className="flex items-center gap-3 px-3 py-2 text-gray-400 font-medium text-sm cursor-not-allowed"
+                  >
+                    <Icon size={18} /> {item.label}
+                  </li>
+                );
+              }
+
+              // Exact match for /dashboard so it doesn't stay active on nested routes
+              // like /dashboard/people; other routes match on prefix.
+              const isActive =
+                item.href === '/dashboard'
+                  ? pathname === '/dashboard'
+                  : pathname === item.href || pathname?.startsWith(item.href + '/');
+
+              return (
+                <li key={item.label}>
+                  <Link
+                    href={item.href}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      isActive
+                        ? 'bg-blue-50 text-blue-900 font-semibold'
+                        : 'text-gray-600 hover:bg-gray-50 font-medium'
+                    }`}
+                  >
+                    <Icon size={18} /> {item.label}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
       </aside>
@@ -80,28 +108,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
         <header className="bg-white h-16 border-b border-gray-200 flex items-center justify-between px-8 shrink-0">
-            <div className="flex gap-6 text-sm font-semibold text-gray-500">
-                <span className="text-[#0A192F] border-b-2 border-[#0A192F] pb-1">
-                  {info?.admin.name ?? 'School Admin'}
-                </span>
-                <span className="hover:text-gray-800 cursor-pointer transition-colors">Customers</span>
-                <span className="hover:text-gray-800 cursor-pointer transition-colors">Support</span>
-                <span className="hover:text-gray-800 cursor-pointer transition-colors">Settings</span>
-            </div>
-            <div className="flex items-center gap-4">
-
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium text-sm transition-colors"
-              >
-                <LogOut size={18} /> Logout
-              </button>
-            </div>
+          <div className="flex gap-6 text-sm font-semibold text-gray-500">
+            <span className="text-[#0A192F] border-b-2 border-[#0A192F] pb-1">
+              {info?.admin.name ?? 'School Admin'}
+            </span>
+            <span className="hover:text-gray-800 cursor-pointer transition-colors">Customers</span>
+            <span className="hover:text-gray-800 cursor-pointer transition-colors">Support</span>
+            <span className="hover:text-gray-800 cursor-pointer transition-colors">Settings</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium text-sm transition-colors"
+            >
+              <LogOut size={18} /> Logout
+            </button>
+          </div>
         </header>
 
         {/* Page Content */}
         <div className="flex-1 overflow-auto p-8">
-            {children}
+          {children}
         </div>
       </main>
     </div>
