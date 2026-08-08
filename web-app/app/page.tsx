@@ -52,7 +52,7 @@ export default function LoginPage() {
         } else if (roles.includes('/teacher-dashboard')) {
           router.push('/dashboard/teacher');
         } else {
-          router.push('select-school');
+          router.push('/select-school');
         }
       } else {
         setError(data.message || 'Incorrect username or password');

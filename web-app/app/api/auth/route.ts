@@ -20,9 +20,6 @@ export async function POST(request: Request) {
       where: { mobile: String(mobile).trim() },
     });
 
-  console.log("Looking for mobile:", mobile);
-  console.log("User found:", user);
-
     if (!user) {
       return NextResponse.json(
         { message: "Incorrect username or password." },

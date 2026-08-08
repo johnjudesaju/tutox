@@ -12,8 +12,24 @@ export async function GET(request: Request) {
         dob: true,
         gender: true,
         guardian: true,
-        class: { select: { name: true } },
-        section: { select: { name: true } },
+
+        class: {
+          select: {
+            name: true,
+            school: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+
+        section: {
+          select: {
+            name: true,
+          },
+        },
+
         user: {
           select: {
             name: true,
@@ -26,7 +42,10 @@ export async function GET(request: Request) {
     });
 
     if (!student) {
-      return NextResponse.json({ error: 'No student record found for this account' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'No student record found for this account' },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({
@@ -37,11 +56,17 @@ export async function GET(request: Request) {
       dob: student.dob,
       gender: student.gender,
       guardian: student.guardian,
+
       className: student.class.name,
       sectionName: student.section.name,
+      schoolName: student.class.school.name,
     });
   } catch (err) {
     console.error('GET /api/student-profile error:', err);
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    );
   }
 }
